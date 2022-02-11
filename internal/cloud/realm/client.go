@@ -145,6 +145,7 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 	if resErr != nil {
 		return nil, resErr
 	}
+	
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
 		return res, nil
 	}
@@ -157,7 +158,7 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 		return nil, err
 	}
 
-	if refreshErr := c.refreshAuth(); refreshErr != nil { // loop gets stuck at refreshAuth call
+	if refreshErr := c.refreshAuth(); refreshErr != nil {
 		c.profile.ClearSession()
 		if err := c.profile.Save(); err != nil {
 			return nil, ErrInvalidSession{}
