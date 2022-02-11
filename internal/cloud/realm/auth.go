@@ -107,12 +107,11 @@ func (c *client) getAuthToken(options api.RequestOptions) (string, error) {
 
 		session := c.profile.Session()
 		if requiresRefreshToken {
-			// fmt.Println(session.RefreshToken)
 			if session.RefreshToken == "" {
 				fmt.Println("getAuthToken: 001")
 				return "", ErrInvalidSession{}
 			}
-			fmt.Println("getAuthToken: 002 - there exists a refresh token")
+			fmt.Println("getAuthToken: 002 - finds refresh token")
 			return session.RefreshToken, nil
 		}
 
@@ -121,7 +120,7 @@ func (c *client) getAuthToken(options api.RequestOptions) (string, error) {
 				fmt.Println("getAuthToken: 003")
 				return "", ErrInvalidSession{}
 			}
-			fmt.Println("getAuthToken: 004")
+			fmt.Println("getAuthToken: 004 - finds access token")
 			return session.AccessToken, nil
 		}
 	}
@@ -135,9 +134,9 @@ func (c *client) refreshAuth() error {
 	res, resErr := c.do(
 		http.MethodPost,
 		authSessionPath,
-		api.RequestOptions{RefreshAuth: true},
+		api.RequestOptions{RefreshAuth: true, PreventRefresh: true},
 	)
-	fmt.Println("refreshAuth: 001 - do finally is gotten past")
+	fmt.Println("refreshAuth: 001 - do is gotten past")
 	if resErr != nil {
 		fmt.Println("refreshAuth: 002 - a resErr")
 		return resErr

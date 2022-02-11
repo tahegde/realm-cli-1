@@ -125,9 +125,7 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 		tee = io.TeeReader(options.Body, &bodyCopy)
 	}
 
-	fmt.Println(method)
-	fmt.Println((c.baseURL))
-	fmt.Println(path)
+	fmt.Printf("%s %s%s\n", method, c.baseURL, path)
 	req, err := http.NewRequest(method, c.baseURL+path, tee)
 	if err != nil {
 		fmt.Printf("DO: 000")
@@ -147,7 +145,7 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 		fmt.Println("DO: 002 -> getAuthToken entered")
 		return nil, err
 	} else if token != "" {
-		fmt.Println("DO: 003: AuthToken not empty -- most likely a refresh token")
+		fmt.Println("DO: 003: AuthToken not empty")
 		req.Header.Set(api.HeaderAuthorization, "Bearer "+token)
 	}
 
@@ -158,10 +156,12 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 		fmt.Printf("DO: 004: there IS a response error")
 		return nil, resErr
 	}
-	fmt.Printf("DO: 004/004: %d\n", res.StatusCode)
-	if method == "POST" && res.StatusCode == 401 {
-		return nil, ErrInvalidSession{}
-	}
+	fmt.Printf("DO: %d\n", res.StatusCode)
+	// if res.StatusCode == 401 && path == authSessionPath {
+	// 	// fmt.Println("DO: 401 from auth/session")
+	// 	// return nil, ErrInvalidSession{}
+	// 	options.PreventRefresh = true
+	// }
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
 		fmt.Println("DO: 005: status code is [200, 299]")
 		return res, nil
@@ -178,7 +178,7 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 
 	fmt.Println("DO: 006: before refreshAuth()")
 	if refreshErr := c.refreshAuth(); refreshErr != nil { // loop gets stuck at refreshAuth call
-		fmt.Println("DO: 007: makes it past refreshAuth! (i.e. there's a refresh error");
+		fmt.Println("DO: 007: past refreshAuth (i.e. there's a refresh error)");
 		c.profile.ClearSession()
 		if err := c.profile.Save(); err != nil {
 			fmt.Println("DO: issue saving profile")
