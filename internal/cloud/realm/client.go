@@ -4,13 +4,11 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/10gen/realm-cli/internal/cli/user"
 	"github.com/10gen/realm-cli/internal/utils/api"
-	"github.com/kr/pretty"
 )
 
 const (
@@ -116,19 +114,14 @@ func (c *client) doJSON(method, path string, payload interface{}, options api.Re
 }
 
 func (c *client) do(method, path string, options api.RequestOptions) (*http.Response, error) {
-	// fmt.Printf("do hit")
-	// fmt.Printf(strconv.FormatBool(options.RefreshAuth));
 	var bodyCopy bytes.Buffer
 	var tee io.Reader
 	if options.Body != nil {
-		// fmt.Printf("not hit");
 		tee = io.TeeReader(options.Body, &bodyCopy)
 	}
 
-	fmt.Printf("%s %s%s\n", method, c.baseURL, path)
 	req, err := http.NewRequest(method, c.baseURL+path, tee)
 	if err != nil {
-		fmt.Printf("DO: 000")
 		return nil, err
 	}
 
@@ -137,15 +130,12 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 	req.Header.Set(requestOriginHeader, cliHeaderValue)
 
 	if options.ContentType != "" {
-		fmt.Printf("DO: 001: options.ContentType not empty not hit")
 		req.Header.Set(api.HeaderContentType, options.ContentType)
 	}
 
 	if token, err := c.getAuthToken(options); err != nil {
-		fmt.Println("DO: 002 -> getAuthToken entered")
 		return nil, err
 	} else if token != "" {
-		fmt.Println("DO: 003: AuthToken not empty")
 		req.Header.Set(api.HeaderAuthorization, "Bearer "+token)
 	}
 
@@ -153,44 +143,30 @@ func (c *client) do(method, path string, options api.RequestOptions) (*http.Resp
 
 	res, resErr := client.Do(req)
 	if resErr != nil {
-		fmt.Printf("DO: 004: there IS a response error")
 		return nil, resErr
 	}
-	fmt.Printf("DO: %d\n", res.StatusCode)
-	// if res.StatusCode == 401 && path == authSessionPath {
-	// 	// fmt.Println("DO: 401 from auth/session")
-	// 	// return nil, ErrInvalidSession{}
-	// 	options.PreventRefresh = true
-	// }
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
-		fmt.Println("DO: 005: status code is [200, 299]")
 		return res, nil
 	}
 	defer res.Body.Close()
 
 	parsedErr := parseResponseError(res)
-	fmt.Printf("DO: error: %# v\n", pretty.Formatter(parsedErr))
 	if err, ok := parsedErr.(ServerError); !ok {
 		return nil, parsedErr
 	} else if options.PreventRefresh || err.Code != errCodeInvalidSession {
 		return nil, err
 	}
 
-	fmt.Println("DO: 006: before refreshAuth()")
 	if refreshErr := c.refreshAuth(); refreshErr != nil { // loop gets stuck at refreshAuth call
-		fmt.Println("DO: 007: past refreshAuth (i.e. there's a refresh error)");
 		c.profile.ClearSession()
 		if err := c.profile.Save(); err != nil {
-			fmt.Println("DO: issue saving profile")
 			return nil, ErrInvalidSession{}
 		}
-		fmt.Println("DO: after profile session cleared, invalid session error returned")
 		return nil, ErrInvalidSession{}
 	}
 
 	options.PreventRefresh = true
 	options.Body = &bodyCopy
 
-	fmt.Printf("DO: 008: end of Do")
 	return c.do(method, path, options)
 }

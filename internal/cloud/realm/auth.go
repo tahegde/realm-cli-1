@@ -95,68 +95,55 @@ func (c *client) AuthProfile() (AuthProfile, error) {
 }
 
 func (c *client) getAuthToken(options api.RequestOptions) (string, error) {
-	fmt.Println("getAuthToken: 000 -- entered")
 	requiresAccessToken := !options.NoAuth
 	requiresRefreshToken := options.RefreshAuth
 
 	if requiresAccessToken || requiresRefreshToken {
 		if c.profile == nil {
-			fmt.Println("0")
 			return "", ErrInvalidSession{}
 		}
 
 		session := c.profile.Session()
 		if requiresRefreshToken {
 			if session.RefreshToken == "" {
-				fmt.Println("getAuthToken: 001")
 				return "", ErrInvalidSession{}
 			}
-			fmt.Println("getAuthToken: 002 - finds refresh token")
 			return session.RefreshToken, nil
 		}
 
 		if requiresAccessToken {
 			if session.AccessToken == "" {
-				fmt.Println("getAuthToken: 003")
 				return "", ErrInvalidSession{}
 			}
-			fmt.Println("getAuthToken: 004 - finds access token")
 			return session.AccessToken, nil
 		}
 	}
 
-	fmt.Println("getAuthToken 005: END")
 	return "", nil
 }
 
 func (c *client) refreshAuth() error {
-	fmt.Println("refreshAuth: 000 - entered")
 	res, resErr := c.do(
 		http.MethodPost,
 		authSessionPath,
 		api.RequestOptions{RefreshAuth: true, PreventRefresh: true},
 	)
-	fmt.Println("refreshAuth: 001 - do is gotten past")
 	if resErr != nil {
-		fmt.Println("refreshAuth: 002 - a resErr")
 		return resErr
 	}
 	if res.StatusCode != http.StatusCreated {
-		fmt.Println("refreshAuth: 003 - status issue")
 		return ErrInvalidSession{}
 	}
 	defer res.Body.Close()
 
 	var s Session
 	if err := json.NewDecoder(res.Body).Decode(&s); err != nil {
-		fmt.Println("refreshAuth: 004 - issue decoding body")
 		return err
 	}
 
 	session := c.profile.Session()
 	session.AccessToken = s.AccessToken
 	c.profile.SetSession(session)
-	fmt.Println("refreshAuth: 005 - end, return profile")
 	return c.profile.Save()
 }
 
